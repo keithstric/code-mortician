@@ -1,0 +1,26 @@
+{
+  "name": "code-mortician",
+  "version": "1.0.0",
+  "description": "Find dead code within a project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "typescript",
+    "compiler"
+  ],
+  "author": {
+    "name": "Keith Strickland",
+    "email": "keith.strickland@randstadusa.com"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^13.7.1",
+    "ts-morph": "^6.0.3",
+    "typescript": "^3.7.5"
+  },
+  "dependencies": {
+    "commander": "^4.1.1"
+  }
+}
