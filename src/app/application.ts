@@ -1,6 +1,13 @@
-import { Project, SourceFile, ClassDeclaration, PropertyDeclaration, MethodDeclaration, ParameterDeclaration } from "ts-morph";
+import {
+	Project,
+	SourceFile,
+	ClassDeclaration,
+	PropertyDeclaration,
+	ParameterDeclaration, FunctionDeclaration, MethodDeclaration, InterfaceDeclaration, EnumDeclaration
+} from "ts-morph";
 import * as path from 'path';
-import { sourceFileHasUnusedEntities } from "./utility";
+import {sourceFileHasUnusedEntities} from "./utility";
+import {UnusedExtendable, UnusedEntity, UnusedSourceFileEntity, UnusedProperty, UnusedMethodOrFunction, ArgumentEntity} from "../types";
 
 export class Application {
 	/**
@@ -15,11 +22,11 @@ export class Application {
 
 	private _unusedEntities: UnusedSourceFileEntity[] = [];
 
+	private _unusedProp: string;
+
 	constructor(options?: any) {
 		const tsConfigPath = path.basename(path.dirname('tsconfig.json'), 'tsconfig.json');
-		console.log('tsConfigPath=', tsConfigPath);
 		const tsConfig = path.join(tsConfigPath, 'tsconfig.json');
-		console.log('tsConfig=', tsConfig);
 		this.project = new Project({
 			tsConfigFilePath: tsConfig
 		});
@@ -35,7 +42,7 @@ export class Application {
 
 	get sourceFileNames() {
 		const sourceFileNames: string[] = [];
-		if(this.sourceFiles && this.sourceFiles.length) {
+		if (this.sourceFiles && this.sourceFiles.length) {
 			this.sourceFiles.forEach((sourceFile) => {
 				sourceFileNames.push(sourceFile.getBaseName());
 			})
@@ -51,22 +58,12 @@ export class Application {
 		console.log('Application.generate');
 		this.sourceFiles.forEach((sourceFile) => {
 			console.log('Working on sourcefile', sourceFile.getFilePath());
-			const sourceFileEntity: UnusedSourceFileEntity = {
-				fileName: sourceFile.getBaseName(),
-				filePath: sourceFile.getFilePath(),
-				unusedFunctions: [],
-				unusedClasses: [],
-				unusedProperties: [],
-				unusedInterfaces: [],
-				unusedTypes: [],
-				unusedEnums: []
-			};
-			const classes = this.parseClasses(sourceFile.getClasses());
-			console.log('classes=', classes);
+			const sourceFileEntity = this.parseFile(sourceFile);
 			if (sourceFileHasUnusedEntities(sourceFileEntity)) {
 				this._unusedEntities.push(sourceFileEntity)
 			}
 		});
+		console.log('unused entities=', this.unusedEntities);
 	}
 
 	private unhandledRejectionListener(err, p) {
@@ -78,14 +75,40 @@ export class Application {
 		console.log('Uncaught Exception', err);
 	}
 
-	private parseClasses(classes: ClassDeclaration[]): {properties: UnusedProperty[], functions: UnusedFunction[], classes: UnusedExtendable[]} {
+	parseFile(sourceFile: SourceFile) {
+		const sourceFileEntity: UnusedSourceFileEntity = {
+			fileName: sourceFile.getBaseName(),
+			filePath: sourceFile.getFilePath(),
+			unusedFunctions: [],
+			unusedClasses: [],
+			unusedProperties: [],
+			unusedInterfaces: [],
+			unusedTypes: [],
+			unusedEnums: []
+		};
+
+		const classes = this.parseClasses(sourceFile.getClasses());
+		sourceFileEntity.unusedFunctions = classes.functions;
+		sourceFileEntity.unusedClasses = classes.classes;
+		sourceFileEntity.unusedProperties = classes.properties;
+		const functions = this.parseMethodsOrFunctions(sourceFile.getFunctions());
+		sourceFileEntity.unusedFunctions = [...sourceFileEntity.unusedFunctions, ...functions];
+		const ifaceItems = this.parseInterfaces(sourceFile.getInterfaces());
+		sourceFileEntity.unusedInterfaces = [...sourceFileEntity.unusedInterfaces, ...ifaceItems];
+		const enumItems = this.parseEnums(sourceFile.getEnums());
+		sourceFileEntity.unusedEnums = [...sourceFileEntity.unusedEnums, ...enumItems];
+		return sourceFileEntity;
+	}
+
+	private parseClasses(classes: ClassDeclaration[]): { properties: UnusedProperty[], functions: UnusedMethodOrFunction[], classes: UnusedExtendable[] } {
 		const returnObj = {
 			properties: [],
 			functions: [],
 			classes: []
 		};
 		classes.forEach((clazz: ClassDeclaration) => {
-			const references = clazz.findReferences();
+			console.log('parseClasses, working on class', clazz.getName());
+			const references = clazz.findReferencesAsNodes();
 			if (!references || !references.length) {
 				const unusedClass: UnusedExtendable = {
 					name: clazz.getName(),
@@ -95,7 +118,7 @@ export class Application {
 				returnObj.classes.push(unusedClass);
 			}
 			returnObj.properties = this.parseProperties(clazz.getProperties());
-			returnObj.functions = this.parseMethods(clazz.getMethods())
+			returnObj.functions = this.parseMethodsOrFunctions(clazz.getMethods())
 		});
 		return returnObj;
 	}
@@ -104,11 +127,11 @@ export class Application {
 		if (properties && properties.length) {
 			const props: UnusedProperty[] = [];
 			properties.forEach((property: PropertyDeclaration) => {
-				const references = property.findReferences();
+				const references = property.findReferencesAsNodes();
 				if (!references || !references.length) {
 					const unusedProp: UnusedProperty = {
 						name: property.getName(),
-						type: property.getKindName()
+						type: property.getType().getText()
 					};
 					props.push(unusedProp);
 				}
@@ -118,13 +141,11 @@ export class Application {
 		return [];
 	}
 
-	private parseMethods(methods: MethodDeclaration[]): UnusedFunction[] {
-		console.log('Application.parseFunctions, functions.length=', methods.length);
+	private parseMethodsOrFunctions<T extends FunctionDeclaration | MethodDeclaration>(methods: T[]): UnusedMethodOrFunction[] {
 		if (methods && methods.length) {
-			const unusedMethods: UnusedFunction[] = [];
-			methods.forEach((method: MethodDeclaration) => {
-				const references = method.findReferences();
-				console.log(`references for ${method.getName()} = ${references}`);
+			const unusedMethods: UnusedMethodOrFunction[] = [];
+			methods.forEach((method: T) => {
+				const references = method.findReferencesAsNodes();
 				if (!references || !references.length) {
 					const args = [];
 					method.getParameters().forEach((param: ParameterDeclaration) => {
@@ -134,7 +155,7 @@ export class Application {
 						};
 						args.push(arg);
 					});
-					const unusedMethod: UnusedFunction = {
+					const unusedMethod: UnusedMethodOrFunction = {
 						name: method.getName(),
 						arguments: args,
 						type: method.getReturnType().getText()
@@ -147,6 +168,33 @@ export class Application {
 		return [];
 	}
 
+	private parseInterfaces(interfaces: InterfaceDeclaration[]) {
+		const returnObj = [];
+		interfaces.forEach((iFace: InterfaceDeclaration) => {
+			const references = iFace.findReferencesAsNodes();
+			if (!references || !references.length) {
+				const unusedInterface: UnusedExtendable = {
+					name: iFace.getName(),
+					extends: iFace.getParent().getKindName(),
+					type: 'interface'
+				};
+				returnObj.push(unusedInterface);
+			}
+		});
+		return returnObj;
+	}
+
+	private parseEnums(enums: EnumDeclaration[]) {
+		const returnObj = [];
+		enums.forEach((enumItem: EnumDeclaration) => {
+			const unusedEnum: UnusedEntity = {
+				name: enumItem.getName(),
+				type: null
+			};
+			returnObj.push(unusedEnum);
+		});
+		return returnObj;
+	}
 	public foo() {
 		console.log('foo');
 	}

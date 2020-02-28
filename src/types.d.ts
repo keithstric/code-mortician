@@ -8,7 +8,7 @@ interface ArgumentEntity {
 	type: string;
 }
 
-interface UnusedFunction extends UnusedEntity {
+interface UnusedMethodOrFunction extends UnusedEntity {
 	arguments: ArgumentEntity[];
 }
 
@@ -23,10 +23,18 @@ interface UnusedExtendable extends UnusedEntity {
 interface UnusedSourceFileEntity {
 	fileName: string;
 	filePath: string;
-	unusedFunctions: UnusedFunction[];
+	unusedFunctions: UnusedMethodOrFunction[];
 	unusedProperties: UnusedProperty[];
 	unusedInterfaces: UnusedExtendable[];
 	unusedClasses: UnusedExtendable[];
 	unusedTypes: UnusedExtendable[];
 	unusedEnums: UnusedEntity[];
+}
+
+interface UnusedInterface {
+	prop1: string;
+}
+
+export enum UnusedEnum {
+	foo = 'foo'
 }

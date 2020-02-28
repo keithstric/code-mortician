@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import * as program from 'commander';
-import { Application } from './app/application';
+import {Application} from './app/application';
 
 const pkg = require('../package.json');
 
@@ -16,7 +16,7 @@ program
 		const options = {
 			sourceFilePath: path
 		};
-		const app = new Application(options);
+		const app = new Application(options); //
 		app.generate();
 		console.log('unusedEntities=', app.unusedEntities);
 	});

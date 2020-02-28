@@ -14,7 +14,7 @@ program
     var options = {
         sourceFilePath: path
     };
-    var app = new application_1.Application(options);
+    var app = new application_1.Application(options); //
     app.generate();
     console.log('unusedEntities=', app.unusedEntities);
 });
@@ -32,3 +32,4 @@ program
     });
 });
 program.parse(process.argv);
+//# sourceMappingURL=index-cli.js.map

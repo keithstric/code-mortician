@@ -1,4 +1,11 @@
 "use strict";
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var ts_morph_1 = require("ts-morph");
 var path = require("path");
@@ -12,9 +19,7 @@ var Application = /** @class */ (function () {
         this._sourceFiles = [];
         this._unusedEntities = [];
         var tsConfigPath = path.basename(path.dirname('tsconfig.json'), 'tsconfig.json');
-        console.log('tsConfigPath=', tsConfigPath);
         var tsConfig = path.join(tsConfigPath, 'tsconfig.json');
-        console.log('tsConfig=', tsConfig);
         this.project = new ts_morph_1.Project({
             tsConfigFilePath: tsConfig
         });
@@ -55,22 +60,12 @@ var Application = /** @class */ (function () {
         console.log('Application.generate');
         this.sourceFiles.forEach(function (sourceFile) {
             console.log('Working on sourcefile', sourceFile.getFilePath());
-            var sourceFileEntity = {
-                fileName: sourceFile.getBaseName(),
-                filePath: sourceFile.getFilePath(),
-                unusedFunctions: [],
-                unusedClasses: [],
-                unusedProperties: [],
-                unusedInterfaces: [],
-                unusedTypes: [],
-                unusedEnums: []
-            };
-            var classes = _this.parseClasses(sourceFile.getClasses());
-            console.log('classes=', classes);
+            var sourceFileEntity = _this.parseFile(sourceFile);
             if (utility_1.sourceFileHasUnusedEntities(sourceFileEntity)) {
                 _this._unusedEntities.push(sourceFileEntity);
             }
         });
+        console.log('unused entities=', this.unusedEntities);
     };
     Application.prototype.unhandledRejectionListener = function (err, p) {
         console.log('Unhandled Rejection at:', p, 'reason:', err);
@@ -78,6 +73,29 @@ var Application = /** @class */ (function () {
     };
     Application.prototype.uncaughtExceptionListener = function (err) {
         console.log('Uncaught Exception', err);
+    };
+    Application.prototype.parseFile = function (sourceFile) {
+        var sourceFileEntity = {
+            fileName: sourceFile.getBaseName(),
+            filePath: sourceFile.getFilePath(),
+            unusedFunctions: [],
+            unusedClasses: [],
+            unusedProperties: [],
+            unusedInterfaces: [],
+            unusedTypes: [],
+            unusedEnums: []
+        };
+        var classes = this.parseClasses(sourceFile.getClasses());
+        sourceFileEntity.unusedFunctions = classes.functions;
+        sourceFileEntity.unusedClasses = classes.classes;
+        sourceFileEntity.unusedProperties = classes.properties;
+        var functions = this.parseMethodsOrFunctions(sourceFile.getFunctions());
+        sourceFileEntity.unusedFunctions = __spreadArrays(sourceFileEntity.unusedFunctions, functions);
+        var ifaceItems = this.parseInterfaces(sourceFile.getInterfaces());
+        sourceFileEntity.unusedInterfaces = __spreadArrays(sourceFileEntity.unusedInterfaces, ifaceItems);
+        var enumItems = this.parseEnums(sourceFile.getEnums());
+        sourceFileEntity.unusedEnums = __spreadArrays(sourceFileEntity.unusedEnums, enumItems);
+        return sourceFileEntity;
     };
     Application.prototype.parseClasses = function (classes) {
         var _this = this;
@@ -87,7 +105,8 @@ var Application = /** @class */ (function () {
             classes: []
         };
         classes.forEach(function (clazz) {
-            var references = clazz.findReferences();
+            console.log('parseClasses, working on class', clazz.getName());
+            var references = clazz.findReferencesAsNodes();
             if (!references || !references.length) {
                 var unusedClass = {
                     name: clazz.getName(),
@@ -97,7 +116,7 @@ var Application = /** @class */ (function () {
                 returnObj.classes.push(unusedClass);
             }
             returnObj.properties = _this.parseProperties(clazz.getProperties());
-            returnObj.functions = _this.parseMethods(clazz.getMethods());
+            returnObj.functions = _this.parseMethodsOrFunctions(clazz.getMethods());
         });
         return returnObj;
     };
@@ -105,11 +124,11 @@ var Application = /** @class */ (function () {
         if (properties && properties.length) {
             var props_1 = [];
             properties.forEach(function (property) {
-                var references = property.findReferences();
+                var references = property.findReferencesAsNodes();
                 if (!references || !references.length) {
                     var unusedProp = {
                         name: property.getName(),
-                        type: property.getKindName()
+                        type: property.getType().getText()
                     };
                     props_1.push(unusedProp);
                 }
@@ -118,13 +137,11 @@ var Application = /** @class */ (function () {
         }
         return [];
     };
-    Application.prototype.parseMethods = function (methods) {
-        console.log('Application.parseFunctions, functions.length=', methods.length);
+    Application.prototype.parseMethodsOrFunctions = function (methods) {
         if (methods && methods.length) {
             var unusedMethods_1 = [];
             methods.forEach(function (method) {
-                var references = method.findReferences();
-                console.log("references for " + method.getName() + " = " + references);
+                var references = method.findReferencesAsNodes();
                 if (!references || !references.length) {
                     var args_1 = [];
                     method.getParameters().forEach(function (param) {
@@ -146,9 +163,36 @@ var Application = /** @class */ (function () {
         }
         return [];
     };
+    Application.prototype.parseInterfaces = function (interfaces) {
+        var returnObj = [];
+        interfaces.forEach(function (iFace) {
+            var references = iFace.findReferencesAsNodes();
+            if (!references || !references.length) {
+                var unusedInterface = {
+                    name: iFace.getName(),
+                    extends: iFace.getParent().getKindName(),
+                    type: 'interface'
+                };
+                returnObj.push(unusedInterface);
+            }
+        });
+        return returnObj;
+    };
+    Application.prototype.parseEnums = function (enums) {
+        var returnObj = [];
+        enums.forEach(function (enumItem) {
+            var unusedEnum = {
+                name: enumItem.getName(),
+                type: null
+            };
+            returnObj.push(unusedEnum);
+        });
+        return returnObj;
+    };
     Application.prototype.foo = function () {
         console.log('foo');
     };
     return Application;
 }());
 exports.Application = Application;
+//# sourceMappingURL=application.js.map
