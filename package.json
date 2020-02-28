@@ -2,13 +2,21 @@
   "name": "code-mortician",
   "version": "1.0.0",
   "description": "Find dead code within a project",
-  "main": "index.js",
+  "bin": {
+    "embalm": "./bin/index-cli.js"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watchAll",
+    "clean": "rm -rf src/**/*.js src/**/*.map bin/"
   },
   "keywords": [
     "typescript",
-    "compiler"
+    "compiler",
+    "cli",
+    "dead code"
   ],
   "author": {
     "name": "Keith Strickland",
@@ -16,11 +24,15 @@
   },
   "license": "ISC",
   "devDependencies": {
+    "@types/jest": "^25.1.2",
     "@types/node": "^13.7.1",
-    "ts-morph": "^6.0.3",
+    "jest": "^25.1.0",
+    "rewire": "^4.0.1",
+    "ts-jest": "^25.2.1",
     "typescript": "^3.7.5"
   },
   "dependencies": {
-    "commander": "^4.1.1"
+    "commander": "^4.1.1",
+    "ts-morph": "^6.0.3"
   }
 }
