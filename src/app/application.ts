@@ -16,11 +16,20 @@ export class Application {
 	 * @type {string[]}
 	 */
 	public _sourceFiles: Array<SourceFile> = [];
-
+	/**
+	 * The ts-morph project
+	 * @type {Project}
+	 */
 	public project: Project;
-
+	/**
+	 * The path to your project
+	 * @type {string}
+	 */
 	public scanPath: string;
-
+	/**
+	 * The dead code we found in your project
+	 * @type {UnusedSourceFileEntity[]}
+	 */
 	private _unusedEntities: UnusedSourceFileEntity[] = [];
 
 	constructor(options?: any) {
@@ -32,6 +41,10 @@ export class Application {
 		this.scanPath = options.sourceFilePath ? options.sourceFilePath : null;
 	}
 
+	/**
+	 *  Array of source files
+	 *  @type {string[]}
+	 */
 	get sourceFiles() {
 		if (this._sourceFiles && !this._sourceFiles.length && this.project) {
 			this._sourceFiles = this.project.getSourceFiles() || [];
@@ -39,6 +52,10 @@ export class Application {
 		return this._sourceFiles;
 	}
 
+	/**
+	 * Array of file names
+	 * @type {string[]}
+	 */
 	get sourceFileNames() {
 		const sourceFileNames: string[] = [];
 		if (this.sourceFiles && this.sourceFiles.length) {
@@ -49,10 +66,17 @@ export class Application {
 		return sourceFileNames;
 	}
 
+	/**
+	 * The dead code we found in your code
+	 * @type {UnusedSourceFileEntity[]}
+	 */
 	get unusedEntities() {
 		return this._unusedEntities || [];
 	}
 
+	/**
+	 * Scans your project code and builds the unusedEntities
+	 */
 	public generate() {
 		this.sourceFiles.forEach((sourceFile) => {
 			console.log('Working on sourcefile', sourceFile.getFilePath());
@@ -64,6 +88,11 @@ export class Application {
 		console.log('unused entities=', this.unusedEntities);
 	}
 
+	/**
+	 * Parses each sourcfile provided
+	 * @param {SourceFile} sourceFile
+	 * @return {UnusedSourceFileEntity}
+	 */
 	private parseFile(sourceFile: SourceFile) {
 		const sourceFileEntity: UnusedSourceFileEntity = {
 			fileName: sourceFile.getBaseName(),
@@ -89,6 +118,11 @@ export class Application {
 		return sourceFileEntity;
 	}
 
+	/**
+	 * Parses the provided class' properties and methods
+	 * @param {ClassDeclaration[]} classes
+	 * @return {UnusedExtendable[]}
+	 */
 	private parseClasses(classes: ClassDeclaration[]): { properties: UnusedProperty[], functions: UnusedMethodOrFunction[], classes: UnusedExtendable[] } {
 		const returnObj = {
 			properties: [],
@@ -113,6 +147,11 @@ export class Application {
 		return returnObj;
 	}
 
+	/**
+	 * Parses the provided properties
+	 * @param {PropertyDeclaration[]} properties
+	 * @return {UnusedProperty[]}
+	 */
 	private parseProperties(properties: PropertyDeclaration[]): UnusedProperty[] {
 		if (properties && properties.length) {
 			const props: UnusedProperty[] = [];
@@ -132,6 +171,11 @@ export class Application {
 		return [];
 	}
 
+	/**
+	 * Parses the provided methods or functions
+	 * @param {FunctionDeclaration[] | MethodDeclaration[]}methods
+	 * @return {UnusedMethodOrFunction[]}
+	 */
 	private parseMethodsOrFunctions<T extends FunctionDeclaration | MethodDeclaration>(methods: T[]): UnusedMethodOrFunction[] {
 		if (methods && methods.length) {
 			const unusedMethods: UnusedMethodOrFunction[] = [];
@@ -163,6 +207,11 @@ export class Application {
 		return [];
 	}
 
+	/**
+	 * Parses the provided interfaces
+	 * @param {InterfaceDeclaration[]} interfaces
+	 * @return {UnusedExtendable[]}
+	 */
 	private parseInterfaces(interfaces: InterfaceDeclaration[]) {
 		const returnObj = [];
 		interfaces.forEach((iFace: InterfaceDeclaration) => {
@@ -180,6 +229,11 @@ export class Application {
 		return returnObj;
 	}
 
+	/**
+	 * Parses the provided enums
+	 * @param {EnumDeclaration[]} enums
+	 * @return {UnusedEntity[]}
+	 */
 	private parseEnums(enums: EnumDeclaration[]) {
 		const returnObj = [];
 		enums.forEach((enumItem: EnumDeclaration) => {

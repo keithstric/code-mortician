@@ -17,6 +17,10 @@ var Application = /** @class */ (function () {
          * @type {string[]}
          */
         this._sourceFiles = [];
+        /**
+         * The dead code we found in your project
+         * @type {UnusedSourceFileEntity[]}
+         */
         this._unusedEntities = [];
         var tsConfigPath = path.basename(path.dirname('tsconfig.json'), 'tsconfig.json');
         var tsConfig = path.join(tsConfigPath, 'tsconfig.json');
@@ -26,6 +30,10 @@ var Application = /** @class */ (function () {
         this.scanPath = options.sourceFilePath ? options.sourceFilePath : null;
     }
     Object.defineProperty(Application.prototype, "sourceFiles", {
+        /**
+         *  Array of source files
+         *  @type {string[]}
+         */
         get: function () {
             if (this._sourceFiles && !this._sourceFiles.length && this.project) {
                 this._sourceFiles = this.project.getSourceFiles() || [];
@@ -36,6 +44,10 @@ var Application = /** @class */ (function () {
         configurable: true
     });
     Object.defineProperty(Application.prototype, "sourceFileNames", {
+        /**
+         * Array of file names
+         * @type {string[]}
+         */
         get: function () {
             var sourceFileNames = [];
             if (this.sourceFiles && this.sourceFiles.length) {
@@ -49,12 +61,19 @@ var Application = /** @class */ (function () {
         configurable: true
     });
     Object.defineProperty(Application.prototype, "unusedEntities", {
+        /**
+         * The dead code we found in your code
+         * @type {UnusedSourceFileEntity[]}
+         */
         get: function () {
             return this._unusedEntities || [];
         },
         enumerable: true,
         configurable: true
     });
+    /**
+     * Scans your project code and builds the unusedEntities
+     */
     Application.prototype.generate = function () {
         var _this = this;
         this.sourceFiles.forEach(function (sourceFile) {
@@ -66,6 +85,11 @@ var Application = /** @class */ (function () {
         });
         console.log('unused entities=', this.unusedEntities);
     };
+    /**
+     * Parses each sourcfile provided
+     * @param {SourceFile} sourceFile
+     * @return {UnusedSourceFileEntity}
+     */
     Application.prototype.parseFile = function (sourceFile) {
         var sourceFileEntity = {
             fileName: sourceFile.getBaseName(),
@@ -89,6 +113,11 @@ var Application = /** @class */ (function () {
         sourceFileEntity.unusedEnums = __spreadArrays(sourceFileEntity.unusedEnums, enumItems);
         return sourceFileEntity;
     };
+    /**
+     * Parses the provided class' properties and methods
+     * @param {ClassDeclaration[]} classes
+     * @return {UnusedExtendable[]}
+     */
     Application.prototype.parseClasses = function (classes) {
         var _this = this;
         var returnObj = {
@@ -113,6 +142,11 @@ var Application = /** @class */ (function () {
         });
         return returnObj;
     };
+    /**
+     * Parses the provided properties
+     * @param {PropertyDeclaration[]} properties
+     * @return {UnusedProperty[]}
+     */
     Application.prototype.parseProperties = function (properties) {
         if (properties && properties.length) {
             var props_1 = [];
@@ -131,6 +165,11 @@ var Application = /** @class */ (function () {
         }
         return [];
     };
+    /**
+     * Parses the provided methods or functions
+     * @param {FunctionDeclaration[] | MethodDeclaration[]}methods
+     * @return {UnusedMethodOrFunction[]}
+     */
     Application.prototype.parseMethodsOrFunctions = function (methods) {
         if (methods && methods.length) {
             var unusedMethods_1 = [];
@@ -161,6 +200,11 @@ var Application = /** @class */ (function () {
         }
         return [];
     };
+    /**
+     * Parses the provided interfaces
+     * @param {InterfaceDeclaration[]} interfaces
+     * @return {UnusedExtendable[]}
+     */
     Application.prototype.parseInterfaces = function (interfaces) {
         var returnObj = [];
         interfaces.forEach(function (iFace) {
@@ -177,6 +221,11 @@ var Application = /** @class */ (function () {
         });
         return returnObj;
     };
+    /**
+     * Parses the provided enums
+     * @param {EnumDeclaration[]} enums
+     * @return {UnusedEntity[]}
+     */
     Application.prototype.parseEnums = function (enums) {
         var returnObj = [];
         enums.forEach(function (enumItem) {
