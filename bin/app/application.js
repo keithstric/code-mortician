@@ -57,7 +57,6 @@ var Application = /** @class */ (function () {
     });
     Application.prototype.generate = function () {
         var _this = this;
-        console.log('Application.generate');
         this.sourceFiles.forEach(function (sourceFile) {
             console.log('Working on sourcefile', sourceFile.getFilePath());
             var sourceFileEntity = _this.parseFile(sourceFile);
@@ -66,13 +65,6 @@ var Application = /** @class */ (function () {
             }
         });
         console.log('unused entities=', this.unusedEntities);
-    };
-    Application.prototype.unhandledRejectionListener = function (err, p) {
-        console.log('Unhandled Rejection at:', p, 'reason:', err);
-        process.exit(1);
-    };
-    Application.prototype.uncaughtExceptionListener = function (err) {
-        console.log('Uncaught Exception', err);
     };
     Application.prototype.parseFile = function (sourceFile) {
         var sourceFileEntity = {
@@ -111,7 +103,8 @@ var Application = /** @class */ (function () {
                 var unusedClass = {
                     name: clazz.getName(),
                     type: 'class',
-                    extends: clazz.getParent().getKindName()
+                    extends: clazz.getParent().getKindName(),
+                    lineNumber: clazz.getStartLineNumber()
                 };
                 returnObj.classes.push(unusedClass);
             }
@@ -128,7 +121,8 @@ var Application = /** @class */ (function () {
                 if (!references || !references.length) {
                     var unusedProp = {
                         name: property.getName(),
-                        type: property.getType().getText()
+                        type: property.getType().getText(),
+                        lineNumber: property.getStartLineNumber()
                     };
                     props_1.push(unusedProp);
                 }
@@ -143,18 +137,22 @@ var Application = /** @class */ (function () {
             methods.forEach(function (method) {
                 var references = method.findReferencesAsNodes();
                 if (!references || !references.length) {
-                    var args_1 = [];
+                    var unusedArgs_1 = [];
                     method.getParameters().forEach(function (param) {
-                        var arg = {
-                            name: param.getName(),
-                            type: param.getType().getText()
-                        };
-                        args_1.push(arg);
+                        var argRefs = param.findReferencesAsNodes();
+                        if (!argRefs || !argRefs.length) {
+                            var arg = {
+                                name: param.getName(),
+                                type: param.getType().getText()
+                            };
+                            unusedArgs_1.push(arg);
+                        }
                     });
                     var unusedMethod = {
                         name: method.getName(),
-                        arguments: args_1,
-                        type: method.getReturnType().getText()
+                        unusedArguments: unusedArgs_1,
+                        type: method.getReturnType().getText(),
+                        lineNumber: method.getStartLineNumber()
                     };
                     unusedMethods_1.push(unusedMethod);
                 }
@@ -171,7 +169,8 @@ var Application = /** @class */ (function () {
                 var unusedInterface = {
                     name: iFace.getName(),
                     extends: iFace.getParent().getKindName(),
-                    type: 'interface'
+                    type: 'interface',
+                    lineNumber: iFace.getStartLineNumber()
                 };
                 returnObj.push(unusedInterface);
             }
@@ -183,14 +182,12 @@ var Application = /** @class */ (function () {
         enums.forEach(function (enumItem) {
             var unusedEnum = {
                 name: enumItem.getName(),
-                type: null
+                type: null,
+                lineNumber: enumItem.getStartLineNumber()
             };
             returnObj.push(unusedEnum);
         });
         return returnObj;
-    };
-    Application.prototype.foo = function () {
-        console.log('foo');
     };
     return Application;
 }());

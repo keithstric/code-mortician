@@ -16,7 +16,4 @@ function sourceFileHasUnusedEntities(sourceFileEntity) {
     return false;
 }
 exports.sourceFileHasUnusedEntities = sourceFileHasUnusedEntities;
-function unusedFunc() {
-    console.log('unused');
-}
 //# sourceMappingURL=utility.js.map

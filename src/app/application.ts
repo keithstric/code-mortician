@@ -7,6 +7,7 @@ import {
 } from "ts-morph";
 import * as path from 'path';
 import {sourceFileHasUnusedEntities} from "./utility";
+// @ts-ignore
 import {UnusedExtendable, UnusedEntity, UnusedSourceFileEntity, UnusedProperty, UnusedMethodOrFunction, ArgumentEntity} from "../types";
 
 export class Application {
@@ -21,8 +22,6 @@ export class Application {
 	public scanPath: string;
 
 	private _unusedEntities: UnusedSourceFileEntity[] = [];
-
-	private _unusedProp: string;
 
 	constructor(options?: any) {
 		const tsConfigPath = path.basename(path.dirname('tsconfig.json'), 'tsconfig.json');
@@ -55,7 +54,6 @@ export class Application {
 	}
 
 	public generate() {
-		console.log('Application.generate');
 		this.sourceFiles.forEach((sourceFile) => {
 			console.log('Working on sourcefile', sourceFile.getFilePath());
 			const sourceFileEntity = this.parseFile(sourceFile);
@@ -66,16 +64,7 @@ export class Application {
 		console.log('unused entities=', this.unusedEntities);
 	}
 
-	private unhandledRejectionListener(err, p) {
-		console.log('Unhandled Rejection at:', p, 'reason:', err);
-		process.exit(1);
-	}
-
-	private uncaughtExceptionListener(err) {
-		console.log('Uncaught Exception', err);
-	}
-
-	parseFile(sourceFile: SourceFile) {
+	private parseFile(sourceFile: SourceFile) {
 		const sourceFileEntity: UnusedSourceFileEntity = {
 			fileName: sourceFile.getBaseName(),
 			filePath: sourceFile.getFilePath(),
@@ -113,7 +102,8 @@ export class Application {
 				const unusedClass: UnusedExtendable = {
 					name: clazz.getName(),
 					type: 'class',
-					extends: clazz.getParent().getKindName()
+					extends: clazz.getParent().getKindName(),
+					lineNumber: clazz.getStartLineNumber()
 				};
 				returnObj.classes.push(unusedClass);
 			}
@@ -131,7 +121,8 @@ export class Application {
 				if (!references || !references.length) {
 					const unusedProp: UnusedProperty = {
 						name: property.getName(),
-						type: property.getType().getText()
+						type: property.getType().getText(),
+						lineNumber: property.getStartLineNumber()
 					};
 					props.push(unusedProp);
 				}
@@ -147,18 +138,22 @@ export class Application {
 			methods.forEach((method: T) => {
 				const references = method.findReferencesAsNodes();
 				if (!references || !references.length) {
-					const args = [];
+					const unusedArgs: ArgumentEntity[] = [];
 					method.getParameters().forEach((param: ParameterDeclaration) => {
-						const arg: ArgumentEntity = {
-							name: param.getName(),
-							type: param.getType().getText()
-						};
-						args.push(arg);
+						const argRefs = param.findReferencesAsNodes();
+						if (!argRefs || !argRefs.length) {
+							const arg: ArgumentEntity = {
+								name: param.getName(),
+								type: param.getType().getText()
+							};
+							unusedArgs.push(arg);
+						}
 					});
 					const unusedMethod: UnusedMethodOrFunction = {
 						name: method.getName(),
-						arguments: args,
-						type: method.getReturnType().getText()
+						unusedArguments: unusedArgs,
+						type: method.getReturnType().getText(),
+						lineNumber: method.getStartLineNumber()
 					};
 					unusedMethods.push(unusedMethod);
 				}
@@ -176,7 +171,8 @@ export class Application {
 				const unusedInterface: UnusedExtendable = {
 					name: iFace.getName(),
 					extends: iFace.getParent().getKindName(),
-					type: 'interface'
+					type: 'interface',
+					lineNumber: iFace.getStartLineNumber()
 				};
 				returnObj.push(unusedInterface);
 			}
@@ -189,13 +185,11 @@ export class Application {
 		enums.forEach((enumItem: EnumDeclaration) => {
 			const unusedEnum: UnusedEntity = {
 				name: enumItem.getName(),
-				type: null
+				type: null,
+				lineNumber: enumItem.getStartLineNumber()
 			};
 			returnObj.push(unusedEnum);
 		});
 		return returnObj;
-	}
-	public foo() {
-		console.log('foo');
 	}
 }

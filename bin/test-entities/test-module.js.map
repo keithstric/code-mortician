@@ -1,0 +1,1 @@
+{"version":3,"file":"test-module.js","sourceRoot":"","sources":["../../src/test-entities/test-module.ts"],"names":[],"mappings":"AAAA,SAAS,YAAY;IACjB,OAAO,CAAC,GAAG,CAAC,iBAAiB,CAAC,CAAC;AACnC,CAAC;AAED,SAAS,cAAc,CAAC,IAAY,EAAE,IAAY;IAC9C,OAAO,CAAC,GAAG,CAAC,oBAAoB,EAAE,IAAI,CAAC,CAAC;IACxC,YAAY,EAAE,CAAC;AACnB,CAAC"}

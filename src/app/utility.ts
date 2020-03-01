@@ -1,3 +1,5 @@
+import {UnusedSourceFileEntity} from "../types";
+
 export function sourceFileHasUnusedEntities(sourceFileEntity: UnusedSourceFileEntity) {
 	if (sourceFileEntity) {
 		let val = 0;
@@ -12,8 +14,4 @@ export function sourceFileHasUnusedEntities(sourceFileEntity: UnusedSourceFileEn
 		}
 	}
 	return false;
-}
-
-function unusedFunc() {
-	console.log('unused');
 }
