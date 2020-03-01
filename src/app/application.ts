@@ -7,25 +7,40 @@ import {
 } from "ts-morph";
 import * as path from 'path';
 import {sourceFileHasUnusedEntities} from "./utility";
-// @ts-ignore
-import {UnusedExtendable, UnusedEntity, UnusedSourceFileEntity, UnusedProperty, UnusedMethodOrFunction, ArgumentEntity} from "../types";
+import {
+	UnusedExtendable,
+	UnusedEntity,
+	UnusedSourceFileEntity,
+	UnusedProperty,
+	UnusedMethodOrFunction,
+	ArgumentEntity
+} from '../types';
 
+/**
+ * Class for the entire scanned application. Holds all the information
+ * needed to generate the accompanying html site
+ * @class {Application}
+ */
 export class Application {
+
 	/**
 	 * Files processed during initial scanning
 	 * @type {string[]}
 	 */
 	public _sourceFiles: Array<SourceFile> = [];
+
 	/**
 	 * The ts-morph project
 	 * @type {Project}
 	 */
 	public project: Project;
+
 	/**
 	 * The path to your project
 	 * @type {string}
 	 */
 	public scanPath: string;
+
 	/**
 	 * The dead code we found in your project
 	 * @type {UnusedSourceFileEntity[]}

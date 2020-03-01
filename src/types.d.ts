@@ -1,7 +1,7 @@
 /**
  * Base UnusedEntity
  */
-interface UnusedEntity {
+export interface UnusedEntity {
 	name: string;
 	type: string;
 	lineNumber: number;
@@ -10,7 +10,7 @@ interface UnusedEntity {
 /**
  * Argument for a method or function
  */
-interface ArgumentEntity {
+export interface ArgumentEntity {
 	name: string;
 	type: string;
 }
@@ -18,21 +18,21 @@ interface ArgumentEntity {
 /**
  * A method or function
  */
-interface UnusedMethodOrFunction extends UnusedEntity {
+export interface UnusedMethodOrFunction extends UnusedEntity {
 	unusedArguments: ArgumentEntity[];
 }
 
 /**
  * A class property
  */
-interface UnusedProperty extends UnusedEntity {
+export interface UnusedProperty extends UnusedEntity {
 	type: string;
 }
 
 /**
  * A class or interface
  */
-interface UnusedExtendable extends UnusedEntity {
+export interface UnusedExtendable extends UnusedEntity {
 	extends: string;
 }
 
@@ -40,7 +40,7 @@ interface UnusedExtendable extends UnusedEntity {
  * This is our consumable and describes all the unused
  * things in a source file
  */
-interface UnusedSourceFileEntity {
+export interface UnusedSourceFileEntity {
 	fileName: string;
 	filePath: string;
 	unusedFunctions: UnusedMethodOrFunction[];
