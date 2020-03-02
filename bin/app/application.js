@@ -10,6 +10,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var ts_morph_1 = require("ts-morph");
 var path = require("path");
 var utility_1 = require("./utility");
+var types_1 = require("../types");
+var builder_1 = require("./SiteGenerator/builder");
+/**
+ * Class for the entire scanned application. Holds all the information
+ * needed to generate the accompanying html site
+ * @class {Application}
+ */
 var Application = /** @class */ (function () {
     function Application(options) {
         /**
@@ -84,6 +91,7 @@ var Application = /** @class */ (function () {
             }
         });
         console.log('unused entities=', this.unusedEntities);
+        builder_1.buildSite(this.unusedEntities);
     };
     /**
      * Parses each sourcfile provided
@@ -133,7 +141,8 @@ var Application = /** @class */ (function () {
                     name: clazz.getName(),
                     type: 'class',
                     extends: clazz.getParent().getKindName(),
-                    lineNumber: clazz.getStartLineNumber()
+                    lineNumber: clazz.getStartLineNumber(),
+                    entityType: types_1.EntityType.CLASS
                 };
                 returnObj.classes.push(unusedClass);
             }
@@ -156,7 +165,9 @@ var Application = /** @class */ (function () {
                     var unusedProp = {
                         name: property.getName(),
                         type: property.getType().getText(),
-                        lineNumber: property.getStartLineNumber()
+                        lineNumber: property.getStartLineNumber(),
+                        parentName: '',
+                        entityType: types_1.EntityType.PROPERTY
                     };
                     props_1.push(unusedProp);
                 }
@@ -174,24 +185,28 @@ var Application = /** @class */ (function () {
         if (methods && methods.length) {
             var unusedMethods_1 = [];
             methods.forEach(function (method) {
+                var unusedArgs = [];
+                method.getParameters().forEach(function (param) {
+                    var argRefs = param.findReferencesAsNodes();
+                    if (!argRefs || !argRefs.length) {
+                        var arg = {
+                            name: param.getName(),
+                            type: param.getType().getText(),
+                            functionName: method.getName(),
+                            lineNumber: param.getStartLineNumber(),
+                            entityType: types_1.EntityType.ARGUMENT
+                        };
+                        unusedArgs.push(arg);
+                    }
+                });
                 var references = method.findReferencesAsNodes();
                 if (!references || !references.length) {
-                    var unusedArgs_1 = [];
-                    method.getParameters().forEach(function (param) {
-                        var argRefs = param.findReferencesAsNodes();
-                        if (!argRefs || !argRefs.length) {
-                            var arg = {
-                                name: param.getName(),
-                                type: param.getType().getText()
-                            };
-                            unusedArgs_1.push(arg);
-                        }
-                    });
                     var unusedMethod = {
                         name: method.getName(),
-                        unusedArguments: unusedArgs_1,
                         type: method.getReturnType().getText(),
-                        lineNumber: method.getStartLineNumber()
+                        lineNumber: method.getStartLineNumber(),
+                        parentName: '',
+                        entityType: types_1.EntityType.METHODORFUNCTION
                     };
                     unusedMethods_1.push(unusedMethod);
                 }
@@ -214,7 +229,8 @@ var Application = /** @class */ (function () {
                     name: iFace.getName(),
                     extends: iFace.getParent().getKindName(),
                     type: 'interface',
-                    lineNumber: iFace.getStartLineNumber()
+                    lineNumber: iFace.getStartLineNumber(),
+                    entityType: types_1.EntityType.INTERFACE
                 };
                 returnObj.push(unusedInterface);
             }
@@ -232,7 +248,8 @@ var Application = /** @class */ (function () {
             var unusedEnum = {
                 name: enumItem.getName(),
                 type: null,
-                lineNumber: enumItem.getStartLineNumber()
+                lineNumber: enumItem.getStartLineNumber(),
+                entityType: types_1.EntityType.ENUM
             };
             returnObj.push(unusedEnum);
         });

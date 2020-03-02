@@ -1,8 +1,8 @@
-function usedFunction() {
+function someUsedFunction() {
     console.log('a used function');
 }
-function unusedFunction(arg1, arg2) {
+function someUnusedFunction(arg1, arg2) {
     console.log('an unused function', arg1);
-    usedFunction();
+    someUsedFunction();
 }
 //# sourceMappingURL=test-module.js.map

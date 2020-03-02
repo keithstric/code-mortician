@@ -1,20 +1,27 @@
 import {
-	Project,
-	SourceFile,
 	ClassDeclaration,
+	EnumDeclaration,
+	FunctionDeclaration,
+	InterfaceDeclaration,
+	MethodDeclaration,
+	ParameterDeclaration,
+	Project,
 	PropertyDeclaration,
-	ParameterDeclaration, FunctionDeclaration, MethodDeclaration, InterfaceDeclaration, EnumDeclaration
+	SourceFile
 } from "ts-morph";
 import * as path from 'path';
 import {sourceFileHasUnusedEntities} from "./utility";
 import {
-	UnusedExtendable,
+	ArgumentEntity,
+	EntityType,
 	UnusedEntity,
-	UnusedSourceFileEntity,
-	UnusedProperty,
+	UnusedExtendable,
 	UnusedMethodOrFunction,
-	ArgumentEntity
-} from '../types';
+	UnusedProperty,
+	UnusedSourceFileEntity
+} from "../types";
+import {generateHtmlPage} from "./SiteGenerator/site-builder";
+import {buildSite} from "./SiteGenerator/builder";
 
 /**
  * Class for the entire scanned application. Holds all the information
@@ -101,6 +108,7 @@ export class Application {
 			}
 		});
 		console.log('unused entities=', this.unusedEntities);
+		buildSite(this.unusedEntities);
 	}
 
 	/**
@@ -152,7 +160,8 @@ export class Application {
 					name: clazz.getName(),
 					type: 'class',
 					extends: clazz.getParent().getKindName(),
-					lineNumber: clazz.getStartLineNumber()
+					lineNumber: clazz.getStartLineNumber(),
+					entityType: EntityType.CLASS
 				};
 				returnObj.classes.push(unusedClass);
 			}
@@ -176,7 +185,9 @@ export class Application {
 					const unusedProp: UnusedProperty = {
 						name: property.getName(),
 						type: property.getType().getText(),
-						lineNumber: property.getStartLineNumber()
+						lineNumber: property.getStartLineNumber(),
+						parentName: '',
+						entityType: EntityType.PROPERTY
 					};
 					props.push(unusedProp);
 				}
@@ -195,24 +206,28 @@ export class Application {
 		if (methods && methods.length) {
 			const unusedMethods: UnusedMethodOrFunction[] = [];
 			methods.forEach((method: T) => {
+				const unusedArgs: ArgumentEntity[] = [];
+				method.getParameters().forEach((param: ParameterDeclaration) => {
+					const argRefs = param.findReferencesAsNodes();
+					if (!argRefs || !argRefs.length) {
+						const arg: ArgumentEntity = {
+							name: param.getName(),
+							type: param.getType().getText(),
+							functionName: method.getName(),
+							lineNumber: param.getStartLineNumber(),
+							entityType: EntityType.ARGUMENT
+						};
+						unusedArgs.push(arg);
+					}
+				});
 				const references = method.findReferencesAsNodes();
 				if (!references || !references.length) {
-					const unusedArgs: ArgumentEntity[] = [];
-					method.getParameters().forEach((param: ParameterDeclaration) => {
-						const argRefs = param.findReferencesAsNodes();
-						if (!argRefs || !argRefs.length) {
-							const arg: ArgumentEntity = {
-								name: param.getName(),
-								type: param.getType().getText()
-							};
-							unusedArgs.push(arg);
-						}
-					});
 					const unusedMethod: UnusedMethodOrFunction = {
 						name: method.getName(),
-						unusedArguments: unusedArgs,
 						type: method.getReturnType().getText(),
-						lineNumber: method.getStartLineNumber()
+						lineNumber: method.getStartLineNumber(),
+						parentName: '',
+						entityType: EntityType.METHODORFUNCTION
 					};
 					unusedMethods.push(unusedMethod);
 				}
@@ -236,7 +251,8 @@ export class Application {
 					name: iFace.getName(),
 					extends: iFace.getParent().getKindName(),
 					type: 'interface',
-					lineNumber: iFace.getStartLineNumber()
+					lineNumber: iFace.getStartLineNumber(),
+					entityType: EntityType.INTERFACE
 				};
 				returnObj.push(unusedInterface);
 			}
@@ -255,7 +271,8 @@ export class Application {
 			const unusedEnum: UnusedEntity = {
 				name: enumItem.getName(),
 				type: null,
-				lineNumber: enumItem.getStartLineNumber()
+				lineNumber: enumItem.getStartLineNumber(),
+				entityType: EntityType.ENUM
 			};
 			returnObj.push(unusedEnum);
 		});

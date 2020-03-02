@@ -5,28 +5,28 @@ export interface UnusedEntity {
 	name: string;
 	type: string;
 	lineNumber: number;
+	entityType: EntityType;
 }
 
 /**
  * Argument for a method or function
  */
-export interface ArgumentEntity {
-	name: string;
-	type: string;
+export interface ArgumentEntity extends UnusedEntity {
+	functionName: string;
 }
 
 /**
  * A method or function
  */
 export interface UnusedMethodOrFunction extends UnusedEntity {
-	unusedArguments: ArgumentEntity[];
+	parentName: string;
 }
 
 /**
  * A class property
  */
 export interface UnusedProperty extends UnusedEntity {
-	type: string;
+	parentName: string;
 }
 
 /**
@@ -49,4 +49,14 @@ export interface UnusedSourceFileEntity {
 	unusedClasses: UnusedExtendable[];
 	unusedTypes: UnusedExtendable[];
 	unusedEnums: UnusedEntity[];
+}
+
+export enum EntityType {
+	CLASS = 'Class',
+	PROPERTY = 'Property',
+	ENUM = 'Enum',
+	METHODORFUNCTION = 'MethodOrFunction',
+	INTERFACE = 'Interface',
+	ARGUMENT = 'Argument',
+	OTHER = 'Other'
 }

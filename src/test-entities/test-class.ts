@@ -1,13 +1,13 @@
-interface UnusedInterface {
+interface SomeInterface {
     prop1: string;
     prop2: number;
 }
 
-enum UnusedEnum {
+enum SomeEnum {
     foo = 'foo'
 }
 
-export class UsedTestClass {
+export class SomeUsedTestClass {
     private _prop1: string;
     private _prop2: number;
 
@@ -16,6 +16,6 @@ export class UsedTestClass {
     }
 }
 
-export class UnusedTestClass extends UsedTestClass {
+export class SomeUnusedTestClass extends SomeUsedTestClass {
 
 }

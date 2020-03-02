@@ -13,25 +13,25 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var UnusedEnum;
-(function (UnusedEnum) {
-    UnusedEnum["foo"] = "foo";
-})(UnusedEnum || (UnusedEnum = {}));
-var UsedTestClass = /** @class */ (function () {
-    function UsedTestClass() {
+var SomeEnum;
+(function (SomeEnum) {
+    SomeEnum["foo"] = "foo";
+})(SomeEnum || (SomeEnum = {}));
+var SomeUsedTestClass = /** @class */ (function () {
+    function SomeUsedTestClass() {
     }
-    UsedTestClass.prototype.func1 = function (arg1, arg2) {
+    SomeUsedTestClass.prototype.func1 = function (arg1, arg2) {
         console.log('some function');
     };
-    return UsedTestClass;
+    return SomeUsedTestClass;
 }());
-exports.UsedTestClass = UsedTestClass;
-var UnusedTestClass = /** @class */ (function (_super) {
-    __extends(UnusedTestClass, _super);
-    function UnusedTestClass() {
+exports.SomeUsedTestClass = SomeUsedTestClass;
+var SomeUnusedTestClass = /** @class */ (function (_super) {
+    __extends(SomeUnusedTestClass, _super);
+    function SomeUnusedTestClass() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    return UnusedTestClass;
-}(UsedTestClass));
-exports.UnusedTestClass = UnusedTestClass;
+    return SomeUnusedTestClass;
+}(SomeUsedTestClass));
+exports.SomeUnusedTestClass = SomeUnusedTestClass;
 //# sourceMappingURL=test-class.js.map
