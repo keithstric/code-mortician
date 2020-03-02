@@ -3,7 +3,7 @@ import {UnusedEntity, UnusedSourceFileEntity} from '../../types';
 const defaultMeta = {
     lang: 'en',
     title: 'code-mortician Dead Code Report',
-    style: './css/style.css',
+    style: '../css/style.css',
     description: 'code-mortician Dead Code Report',
     author: 'The code-mortician Team',
     charset: 'utf-8'
@@ -33,11 +33,11 @@ export function generateHtmlPage(unusedEntities: UnusedSourceFileEntity[], pageM
 
 function getLayoutHtml(unusedEntities: UnusedSourceFileEntity[]) {
   return `
-<div class="siteContainer flex-row">
-  <div class="header">${pageMetadata.title}</div>
-  <div class="bottomLayout flex-column">
-    <div class="sidebar flex-row">${getSidebarHtml(unusedEntities)}</div>
-    <div class="content flex-row">${getContentHtml(unusedEntities)}</div>
+<div class="siteContainer flex-column">
+  <div class="header flex-row">${pageMetadata.title}</div>
+  <div class="bottomLayout flex-row">
+    <div class="sidebar flex-column">${getSidebarHtml(unusedEntities)}</div>
+    <div class="content flex-column">${getContentHtml(unusedEntities)}</div>
   </div>
 </div>
   `;
@@ -48,7 +48,7 @@ function getSidebarHtml(unusedEntities: UnusedSourceFileEntity[]) {
   if (unusedEntities && unusedEntities.length) {
     unusedEntities.forEach((unusedFileEntity) => {
       returnVal += `
-        <a href="#${unusedFileEntity.fileName}">${unusedFileEntity.fileName}</a>
+        <a href="#${unusedFileEntity.fileName}" class="sidebarLink">${unusedFileEntity.fileName}</a>
       `;
     });
   }
@@ -75,9 +75,9 @@ function getContentHtml(unusedFileEntities: UnusedSourceFileEntity[]) {
 
 function getEntityHtml(unusedEntity: UnusedEntity) {
   let returnVal = `  
-<div class="unusedEntity flex">
+<div class="unusedEntity flex-column">
   <h3>${unusedEntity.entityType}: ${unusedEntity.name}</h3>
-  <div class="entityBody flex-row">
+  <div class="entityBody flex-column">
   `;
   Object.keys(unusedEntity).forEach((key) => {
     returnVal += `

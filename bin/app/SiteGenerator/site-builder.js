@@ -16,13 +16,13 @@ function generateHtmlPage(unusedEntities, pageMeta) {
 }
 exports.generateHtmlPage = generateHtmlPage;
 function getLayoutHtml(unusedEntities) {
-    return "\n<div class=\"siteContainer flex-row\">\n  <div class=\"header\">" + pageMetadata.title + "</div>\n  <div class=\"bottomLayout flex-column\">\n    <div class=\"sidebar flex-row\">" + getSidebarHtml(unusedEntities) + "</div>\n    <div class=\"content flex-row\">" + getContentHtml(unusedEntities) + "</div>\n  </div>\n</div>\n  ";
+    return "\n<div class=\"siteContainer flex-column\">\n  <div class=\"header flex-row\">" + pageMetadata.title + "</div>\n  <div class=\"bottomLayout flex-row\">\n    <div class=\"sidebar flex-column\">" + getSidebarHtml(unusedEntities) + "</div>\n    <div class=\"content flex-column\">" + getContentHtml(unusedEntities) + "</div>\n  </div>\n</div>\n  ";
 }
 function getSidebarHtml(unusedEntities) {
     var returnVal = "";
     if (unusedEntities && unusedEntities.length) {
         unusedEntities.forEach(function (unusedFileEntity) {
-            returnVal += "\n        <a href=\"#" + unusedFileEntity.fileName + "\">" + unusedFileEntity.fileName + "</a>\n      ";
+            returnVal += "\n        <a href=\"#" + unusedFileEntity.fileName + "\" class=\"sidebarLink\">" + unusedFileEntity.fileName + "</a>\n      ";
         });
     }
     return returnVal;
@@ -45,7 +45,7 @@ function getContentHtml(unusedFileEntities) {
     return returnVal;
 }
 function getEntityHtml(unusedEntity) {
-    var returnVal = "  \n<div class=\"unusedEntity flex\">\n  <h3>" + unusedEntity.entityType + ": " + unusedEntity.name + "</h3>\n  <div class=\"entityBody flex-row\">\n  ";
+    var returnVal = "  \n<div class=\"unusedEntity flex-column\">\n  <h3>" + unusedEntity.entityType + ": " + unusedEntity.name + "</h3>\n  <div class=\"entityBody flex-column\">\n  ";
     Object.keys(unusedEntity).forEach(function (key) {
         returnVal += "\n    <div class=\"entityProperty\">\n      <span class=\"label\">" + key + ":</span>\n      <span class=\"value\">" + unusedEntity[key] + "</span>\n    </div>\n    ";
     });
