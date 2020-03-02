@@ -1,14 +1,14 @@
 {
   "name": "code-mortician",
   "version": "1.0.0",
-  "description": "Find dead code within a project",
+  "description": "Find and report dead code within a Typescript project",
   "bin": {
     "embalm": "./bin/index-cli.js"
   },
   "scripts": {
     "prebuild": "npm run clean",
     "build": "tsc",
-    "postbuild": "ncp ./css ./bin/css",
+    "postbuild": "ncp ./css ./bin/css && rimraf ./bin/test-entities/",
     "watch": "tsc --watch",
     "test": "jest",
     "test:watch": "jest --watchAll",
