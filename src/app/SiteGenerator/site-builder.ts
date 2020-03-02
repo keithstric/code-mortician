@@ -1,16 +1,16 @@
-import {UnusedEntity, UnusedSourceFileEntity} from '../../types';
+import {DeadEntity, DeadSourceFileEntity} from '../../types';
 
 const defaultMeta = {
     lang: 'en',
     title: 'code-mortician Dead Code Report',
-    style: '../css/style.css',
+    style: './css/style.css',
     description: 'code-mortician Dead Code Report',
     author: 'The code-mortician Team',
     charset: 'utf-8'
 };
 let pageMetadata;
 
-export function generateHtmlPage(unusedEntities: UnusedSourceFileEntity[], pageMeta = defaultMeta) {
+export function generateHtmlPage(unusedEntities: DeadSourceFileEntity[], pageMeta = defaultMeta) {
   pageMetadata = pageMeta;
   return `
 <!DOCTYPE html>
@@ -31,7 +31,7 @@ export function generateHtmlPage(unusedEntities: UnusedSourceFileEntity[], pageM
   `;
 }
 
-function getLayoutHtml(unusedEntities: UnusedSourceFileEntity[]) {
+function getLayoutHtml(unusedEntities: DeadSourceFileEntity[]) {
   return `
 <div class="siteContainer flex-column">
   <div class="header flex-row">${pageMetadata.title}</div>
@@ -43,26 +43,35 @@ function getLayoutHtml(unusedEntities: UnusedSourceFileEntity[]) {
   `;
 }
 
-function getSidebarHtml(unusedEntities: UnusedSourceFileEntity[]) {
+function getSidebarHtml(unusedEntities: DeadSourceFileEntity[]) {
   let returnVal = ``;
   if (unusedEntities && unusedEntities.length) {
+    unusedEntities = unusedEntities.sort((a, b) => {
+      return a.fileName > b.fileName ? 1 : a.fileName < b.fileName ? -1 : 0;
+    });
     unusedEntities.forEach((unusedFileEntity) => {
       returnVal += `
-        <a href="#${unusedFileEntity.fileName}" class="sidebarLink">${unusedFileEntity.fileName}</a>
+        <a href="#${unusedFileEntity.fileName}" class="sidebarLink" title="${unusedFileEntity.filePath}">${unusedFileEntity.fileName}</a>
       `;
     });
   }
   return returnVal;
 }
 
-function getContentHtml(unusedFileEntities: UnusedSourceFileEntity[]) {
+function getContentHtml(unusedFileEntities: DeadSourceFileEntity[]) {
   let returnVal = ``;
   if (unusedFileEntities && unusedFileEntities.length) {
+    unusedFileEntities.sort((a, b) => {
+      return a.fileName > b.fileName ? 1 : a.fileName < b.fileName ? -1 : 0;
+    });
     unusedFileEntities.forEach((unusedFileEntity) => {
       returnVal += `<a id="${unusedFileEntity.fileName}"></a>`;
       const props = Object.keys(unusedFileEntity).forEach((key) => {
-        const unusedFileProp = unusedFileEntity[key];
+        let unusedFileProp: DeadEntity[] = unusedFileEntity[key];
         if (Array.isArray(unusedFileProp) && unusedFileProp.length) {
+          unusedFileProp = unusedFileProp.sort((a, b) => {
+            return a.name > b.name ? 1 : a.name < b.name ? -1 : 0;
+          });
           unusedFileProp.forEach((unusedEntity) => {
             returnVal += `${getEntityHtml(unusedEntity)}`;
           });
@@ -73,13 +82,14 @@ function getContentHtml(unusedFileEntities: UnusedSourceFileEntity[]) {
   return returnVal;
 }
 
-function getEntityHtml(unusedEntity: UnusedEntity) {
+function getEntityHtml(unusedEntity: DeadEntity) {
   let returnVal = `  
 <div class="unusedEntity flex-column">
   <h3>${unusedEntity.entityType}: ${unusedEntity.name}</h3>
   <div class="entityBody flex-column">
   `;
-  Object.keys(unusedEntity).forEach((key) => {
+  const keys = Object.keys(unusedEntity).sort();
+  keys.forEach((key) => {
     returnVal += `
     <div class="entityProperty">
       <span class="label">${key}:</span>

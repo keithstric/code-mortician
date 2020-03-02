@@ -12,13 +12,13 @@ import {
 import * as path from 'path';
 import {sourceFileHasUnusedEntities} from "./utility";
 import {
-	ArgumentEntity,
-	EntityType,
-	UnusedEntity,
-	UnusedExtendable,
-	UnusedMethodOrFunction,
-	UnusedProperty,
-	UnusedSourceFileEntity
+	DeadArgumentEntity,
+	DeadEntityType,
+	DeadEntity,
+	DeadExtendable,
+	DeadMethodOrFunction,
+	DeadProperty,
+	DeadSourceFileEntity
 } from "../types";
 import {generateHtmlPage} from "./SiteGenerator/site-builder";
 import {buildSite} from "./SiteGenerator/builder";
@@ -50,9 +50,9 @@ export class Application {
 
 	/**
 	 * The dead code we found in your project
-	 * @type {UnusedSourceFileEntity[]}
+	 * @type {DeadSourceFileEntity[]}
 	 */
-	private _unusedEntities: UnusedSourceFileEntity[] = [];
+	private _unusedEntities: DeadSourceFileEntity[] = [];
 
 	constructor(options?: any) {
 		const tsConfigPath = path.basename(path.dirname('tsconfig.json'), 'tsconfig.json');
@@ -90,7 +90,7 @@ export class Application {
 
 	/**
 	 * The dead code we found in your code
-	 * @type {UnusedSourceFileEntity[]}
+	 * @type {DeadSourceFileEntity[]}
 	 */
 	get unusedEntities() {
 		return this._unusedEntities || [];
@@ -107,17 +107,17 @@ export class Application {
 				this._unusedEntities.push(sourceFileEntity)
 			}
 		});
-		console.log('unused entities=', this.unusedEntities);
-		buildSite(this.unusedEntities);
+		buildSite(this.unusedEntities, {outputPath: path.join(this.scanPath, 'graveyard-docs'), copyFolders: ['css']});
+		console.log(`Done. Processed ${this.sourceFiles.length} source files. Results can be found in the graveyard-docs directory.`);
 	}
 
 	/**
-	 * Parses each sourcfile provided
+	 * Parses each sourcefile provided
 	 * @param {SourceFile} sourceFile
-	 * @return {UnusedSourceFileEntity}
+	 * @return {DeadSourceFileEntity}
 	 */
 	private parseFile(sourceFile: SourceFile) {
-		const sourceFileEntity: UnusedSourceFileEntity = {
+		const sourceFileEntity: DeadSourceFileEntity = {
 			fileName: sourceFile.getBaseName(),
 			filePath: sourceFile.getFilePath(),
 			unusedFunctions: [],
@@ -125,48 +125,59 @@ export class Application {
 			unusedProperties: [],
 			unusedInterfaces: [],
 			unusedTypes: [],
-			unusedEnums: []
+			unusedEnums: [],
+			unusedArguments: []
 		};
 
-		const classes = this.parseClasses(sourceFile.getClasses());
-		sourceFileEntity.unusedFunctions = classes.functions;
-		sourceFileEntity.unusedClasses = classes.classes;
-		sourceFileEntity.unusedProperties = classes.properties;
-		const functions = this.parseMethodsOrFunctions(sourceFile.getFunctions());
-		sourceFileEntity.unusedFunctions = [...sourceFileEntity.unusedFunctions, ...functions];
-		const ifaceItems = this.parseInterfaces(sourceFile.getInterfaces());
+		const classes = this.parseClasses(sourceFile.getClasses(), sourceFile.getFilePath());
+		sourceFileEntity.unusedFunctions = [...sourceFileEntity.unusedFunctions, ...classes.functions];
+		sourceFileEntity.unusedClasses = [...sourceFileEntity.unusedClasses, ...classes.classes];
+		sourceFileEntity.unusedProperties = [...sourceFileEntity.unusedProperties, ...classes.properties];
+		sourceFileEntity.unusedArguments = [...sourceFileEntity.unusedArguments, ...classes.arguments];
+		// Functions
+		const functions = this.parseMethodsOrFunctions(sourceFile.getFunctions(), sourceFile.getFilePath());
+		sourceFileEntity.unusedFunctions = [...sourceFileEntity.unusedFunctions, ...functions.methods];
+		sourceFileEntity.unusedArguments = [...sourceFileEntity.unusedArguments, ...functions.arguments];
+		// Interfaces
+		const ifaceItems = this.parseInterfaces(sourceFile.getInterfaces(), sourceFile.getFilePath());
 		sourceFileEntity.unusedInterfaces = [...sourceFileEntity.unusedInterfaces, ...ifaceItems];
-		const enumItems = this.parseEnums(sourceFile.getEnums());
+		// Enums
+		const enumItems = this.parseEnums(sourceFile.getEnums(), sourceFile.getFilePath());
 		sourceFileEntity.unusedEnums = [...sourceFileEntity.unusedEnums, ...enumItems];
+
 		return sourceFileEntity;
 	}
 
 	/**
 	 * Parses the provided class' properties and methods
 	 * @param {ClassDeclaration[]} classes
-	 * @return {UnusedExtendable[]}
+	 * @param {string} sourceFileName
+	 * @return {DeadExtendable[]}
 	 */
-	private parseClasses(classes: ClassDeclaration[]): { properties: UnusedProperty[], functions: UnusedMethodOrFunction[], classes: UnusedExtendable[] } {
+	private parseClasses(classes: ClassDeclaration[], sourceFileName: string): { properties: DeadProperty[], functions: DeadMethodOrFunction[], classes: DeadExtendable[], arguments: DeadArgumentEntity[] } {
 		const returnObj = {
 			properties: [],
 			functions: [],
+			arguments: [],
 			classes: []
 		};
 		classes.forEach((clazz: ClassDeclaration) => {
-			console.log('parseClasses, working on class', clazz.getName());
-			const references = clazz.findReferencesAsNodes();
-			if (!references || !references.length) {
-				const unusedClass: UnusedExtendable = {
+			returnObj.properties = this.parseProperties(clazz.getProperties(), sourceFileName);
+			const methodItems = this.parseMethodsOrFunctions(clazz.getMethods(), sourceFileName);
+			returnObj.functions = methodItems.methods;
+			returnObj.arguments = methodItems.arguments;
+			const referenceNodes = clazz.findReferencesAsNodes();
+			if (!referenceNodes || !referenceNodes.length) {
+				const unusedClass: DeadExtendable = {
 					name: clazz.getName(),
 					type: 'class',
 					extends: clazz.getParent().getKindName(),
 					lineNumber: clazz.getStartLineNumber(),
-					entityType: EntityType.CLASS
+					entityType: DeadEntityType.CLASS,
+					sourceFile: sourceFileName
 				};
 				returnObj.classes.push(unusedClass);
 			}
-			returnObj.properties = this.parseProperties(clazz.getProperties());
-			returnObj.functions = this.parseMethodsOrFunctions(clazz.getMethods())
 		});
 		return returnObj;
 	}
@@ -174,20 +185,22 @@ export class Application {
 	/**
 	 * Parses the provided properties
 	 * @param {PropertyDeclaration[]} properties
-	 * @return {UnusedProperty[]}
+	 * @param {string} sourceFileName
+	 * @return {DeadProperty[]}
 	 */
-	private parseProperties(properties: PropertyDeclaration[]): UnusedProperty[] {
+	private parseProperties(properties: PropertyDeclaration[], sourceFileName: string): DeadProperty[] {
 		if (properties && properties.length) {
-			const props: UnusedProperty[] = [];
+			const props: DeadProperty[] = [];
 			properties.forEach((property: PropertyDeclaration) => {
-				const references = property.findReferencesAsNodes();
-				if (!references || !references.length) {
-					const unusedProp: UnusedProperty = {
+				const referenceNodes = property.findReferencesAsNodes();
+				if (!referenceNodes || !referenceNodes.length) {
+					const unusedProp: DeadProperty = {
 						name: property.getName(),
 						type: property.getType().getText(),
 						lineNumber: property.getStartLineNumber(),
 						parentName: '',
-						entityType: EntityType.PROPERTY
+						entityType: DeadEntityType.PROPERTY,
+						sourceFile: sourceFileName
 					};
 					props.push(unusedProp);
 				}
@@ -200,59 +213,66 @@ export class Application {
 	/**
 	 * Parses the provided methods or functions
 	 * @param {FunctionDeclaration[] | MethodDeclaration[]}methods
-	 * @return {UnusedMethodOrFunction[]}
+	 * @param {string} sourceFileName
+	 * @return {DeadMethodOrFunction[]}
 	 */
-	private parseMethodsOrFunctions<T extends FunctionDeclaration | MethodDeclaration>(methods: T[]): UnusedMethodOrFunction[] {
+	private parseMethodsOrFunctions<T extends FunctionDeclaration | MethodDeclaration>(methods: T[], sourceFileName: string) {
+		const returnObj = {
+			methods: [],
+			arguments: []
+		}
 		if (methods && methods.length) {
-			const unusedMethods: UnusedMethodOrFunction[] = [];
 			methods.forEach((method: T) => {
-				const unusedArgs: ArgumentEntity[] = [];
 				method.getParameters().forEach((param: ParameterDeclaration) => {
 					const argRefs = param.findReferencesAsNodes();
 					if (!argRefs || !argRefs.length) {
-						const arg: ArgumentEntity = {
+						const arg: DeadArgumentEntity = {
 							name: param.getName(),
 							type: param.getType().getText(),
 							functionName: method.getName(),
 							lineNumber: param.getStartLineNumber(),
-							entityType: EntityType.ARGUMENT
+							entityType: DeadEntityType.ARGUMENT,
+							sourceFile: sourceFileName,
+							parentName: method.getName()
 						};
-						unusedArgs.push(arg);
+						returnObj.arguments.push(arg);
 					}
 				});
 				const references = method.findReferencesAsNodes();
 				if (!references || !references.length) {
-					const unusedMethod: UnusedMethodOrFunction = {
+					const unusedMethod: DeadMethodOrFunction = {
 						name: method.getName(),
 						type: method.getReturnType().getText(),
 						lineNumber: method.getStartLineNumber(),
 						parentName: '',
-						entityType: EntityType.METHODORFUNCTION
+						entityType: DeadEntityType.METHODORFUNCTION,
+						sourceFile: sourceFileName
 					};
-					unusedMethods.push(unusedMethod);
+					returnObj.methods.push(unusedMethod);
 				}
 			});
-			return unusedMethods;
 		}
-		return [];
+		return returnObj;
 	}
 
 	/**
 	 * Parses the provided interfaces
 	 * @param {InterfaceDeclaration[]} interfaces
-	 * @return {UnusedExtendable[]}
+	 * @param {string} sourceFileName
+	 * @return {DeadExtendable[]}
 	 */
-	private parseInterfaces(interfaces: InterfaceDeclaration[]) {
+	private parseInterfaces(interfaces: InterfaceDeclaration[], sourceFileName: string) {
 		const returnObj = [];
 		interfaces.forEach((iFace: InterfaceDeclaration) => {
 			const references = iFace.findReferencesAsNodes();
 			if (!references || !references.length) {
-				const unusedInterface: UnusedExtendable = {
+				const unusedInterface: DeadExtendable = {
 					name: iFace.getName(),
 					extends: iFace.getParent().getKindName(),
 					type: 'interface',
 					lineNumber: iFace.getStartLineNumber(),
-					entityType: EntityType.INTERFACE
+					entityType: DeadEntityType.INTERFACE,
+					sourceFile: sourceFileName
 				};
 				returnObj.push(unusedInterface);
 			}
@@ -263,16 +283,18 @@ export class Application {
 	/**
 	 * Parses the provided enums
 	 * @param {EnumDeclaration[]} enums
-	 * @return {UnusedEntity[]}
+	 * @param {string} sourceFileName
+	 * @return {DeadEntity[]}
 	 */
-	private parseEnums(enums: EnumDeclaration[]) {
+	private parseEnums(enums: EnumDeclaration[], sourceFileName: string) {
 		const returnObj = [];
 		enums.forEach((enumItem: EnumDeclaration) => {
-			const unusedEnum: UnusedEntity = {
+			const unusedEnum: DeadEntity = {
 				name: enumItem.getName(),
 				type: null,
 				lineNumber: enumItem.getStartLineNumber(),
-				entityType: EntityType.ENUM
+				entityType: DeadEntityType.ENUM,
+				sourceFile: sourceFileName
 			};
 			returnObj.push(unusedEnum);
 		});

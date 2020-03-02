@@ -2,7 +2,7 @@
 /dist
 /tmp
 /out-tsc
-/documentation
+/graveyard-docs
 /coverage
 src/**/*.js
 src/**/*.map

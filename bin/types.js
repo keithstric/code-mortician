@@ -1,13 +1,19 @@
 "use strict";
+/**
+ * Typescript Types used throughout the application
+ */
 Object.defineProperty(exports, "__esModule", { value: true });
-var EntityType;
-(function (EntityType) {
-    EntityType["CLASS"] = "Class";
-    EntityType["PROPERTY"] = "Property";
-    EntityType["ENUM"] = "Enum";
-    EntityType["METHODORFUNCTION"] = "MethodOrFunction";
-    EntityType["INTERFACE"] = "Interface";
-    EntityType["ARGUMENT"] = "Argument";
-    EntityType["OTHER"] = "Other";
-})(EntityType = exports.EntityType || (exports.EntityType = {}));
+/**
+ * Defines the different types of entities we may encounter
+ */
+var DeadEntityType;
+(function (DeadEntityType) {
+    DeadEntityType["CLASS"] = "Class";
+    DeadEntityType["PROPERTY"] = "Property";
+    DeadEntityType["ENUM"] = "Enum";
+    DeadEntityType["METHODORFUNCTION"] = "MethodOrFunction";
+    DeadEntityType["INTERFACE"] = "Interface";
+    DeadEntityType["ARGUMENT"] = "Argument";
+    DeadEntityType["OTHER"] = "Other";
+})(DeadEntityType = exports.DeadEntityType || (exports.DeadEntityType = {}));
 //# sourceMappingURL=types.js.map

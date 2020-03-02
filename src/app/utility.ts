@@ -1,6 +1,7 @@
-import {UnusedSourceFileEntity} from "../types";
+import {DeadSourceFileEntity} from "../types";
+import {Node, ReferenceFindableNode} from "ts-morph";
 
-export function sourceFileHasUnusedEntities(sourceFileEntity: UnusedSourceFileEntity) {
+export function sourceFileHasUnusedEntities(sourceFileEntity: DeadSourceFileEntity) {
 	if (sourceFileEntity) {
 		let val = 0;
 		val += sourceFileEntity.unusedClasses.length;

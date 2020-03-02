@@ -26,7 +26,7 @@ var Application = /** @class */ (function () {
         this._sourceFiles = [];
         /**
          * The dead code we found in your project
-         * @type {UnusedSourceFileEntity[]}
+         * @type {DeadSourceFileEntity[]}
          */
         this._unusedEntities = [];
         var tsConfigPath = path.basename(path.dirname('tsconfig.json'), 'tsconfig.json');
@@ -70,7 +70,7 @@ var Application = /** @class */ (function () {
     Object.defineProperty(Application.prototype, "unusedEntities", {
         /**
          * The dead code we found in your code
-         * @type {UnusedSourceFileEntity[]}
+         * @type {DeadSourceFileEntity[]}
          */
         get: function () {
             return this._unusedEntities || [];
@@ -90,13 +90,13 @@ var Application = /** @class */ (function () {
                 _this._unusedEntities.push(sourceFileEntity);
             }
         });
-        console.log('unused entities=', this.unusedEntities);
-        builder_1.buildSite(this.unusedEntities);
+        builder_1.buildSite(this.unusedEntities, { outputPath: path.join(this.scanPath, 'graveyard-docs'), copyFolders: ['css'] });
+        console.log("Done. Processed " + this.sourceFiles.length + " source files. Results can be found in the graveyard-docs directory.");
     };
     /**
-     * Parses each sourcfile provided
+     * Parses each sourcefile provided
      * @param {SourceFile} sourceFile
-     * @return {UnusedSourceFileEntity}
+     * @return {DeadSourceFileEntity}
      */
     Application.prototype.parseFile = function (sourceFile) {
         var sourceFileEntity = {
@@ -107,67 +107,79 @@ var Application = /** @class */ (function () {
             unusedProperties: [],
             unusedInterfaces: [],
             unusedTypes: [],
-            unusedEnums: []
+            unusedEnums: [],
+            unusedArguments: []
         };
-        var classes = this.parseClasses(sourceFile.getClasses());
-        sourceFileEntity.unusedFunctions = classes.functions;
-        sourceFileEntity.unusedClasses = classes.classes;
-        sourceFileEntity.unusedProperties = classes.properties;
-        var functions = this.parseMethodsOrFunctions(sourceFile.getFunctions());
-        sourceFileEntity.unusedFunctions = __spreadArrays(sourceFileEntity.unusedFunctions, functions);
-        var ifaceItems = this.parseInterfaces(sourceFile.getInterfaces());
+        var classes = this.parseClasses(sourceFile.getClasses(), sourceFile.getFilePath());
+        sourceFileEntity.unusedFunctions = __spreadArrays(sourceFileEntity.unusedFunctions, classes.functions);
+        sourceFileEntity.unusedClasses = __spreadArrays(sourceFileEntity.unusedClasses, classes.classes);
+        sourceFileEntity.unusedProperties = __spreadArrays(sourceFileEntity.unusedProperties, classes.properties);
+        sourceFileEntity.unusedArguments = __spreadArrays(sourceFileEntity.unusedArguments, classes.arguments);
+        // Functions
+        var functions = this.parseMethodsOrFunctions(sourceFile.getFunctions(), sourceFile.getFilePath());
+        sourceFileEntity.unusedFunctions = __spreadArrays(sourceFileEntity.unusedFunctions, functions.methods);
+        sourceFileEntity.unusedArguments = __spreadArrays(sourceFileEntity.unusedArguments, functions.arguments);
+        // Interfaces
+        var ifaceItems = this.parseInterfaces(sourceFile.getInterfaces(), sourceFile.getFilePath());
         sourceFileEntity.unusedInterfaces = __spreadArrays(sourceFileEntity.unusedInterfaces, ifaceItems);
-        var enumItems = this.parseEnums(sourceFile.getEnums());
+        // Enums
+        var enumItems = this.parseEnums(sourceFile.getEnums(), sourceFile.getFilePath());
         sourceFileEntity.unusedEnums = __spreadArrays(sourceFileEntity.unusedEnums, enumItems);
         return sourceFileEntity;
     };
     /**
      * Parses the provided class' properties and methods
      * @param {ClassDeclaration[]} classes
-     * @return {UnusedExtendable[]}
+     * @param {string} sourceFileName
+     * @return {DeadExtendable[]}
      */
-    Application.prototype.parseClasses = function (classes) {
+    Application.prototype.parseClasses = function (classes, sourceFileName) {
         var _this = this;
         var returnObj = {
             properties: [],
             functions: [],
+            arguments: [],
             classes: []
         };
         classes.forEach(function (clazz) {
-            console.log('parseClasses, working on class', clazz.getName());
-            var references = clazz.findReferencesAsNodes();
-            if (!references || !references.length) {
+            returnObj.properties = _this.parseProperties(clazz.getProperties(), sourceFileName);
+            var methodItems = _this.parseMethodsOrFunctions(clazz.getMethods(), sourceFileName);
+            returnObj.functions = methodItems.methods;
+            returnObj.arguments = methodItems.arguments;
+            var referenceNodes = clazz.findReferencesAsNodes();
+            if (!referenceNodes || !referenceNodes.length) {
                 var unusedClass = {
                     name: clazz.getName(),
                     type: 'class',
                     extends: clazz.getParent().getKindName(),
                     lineNumber: clazz.getStartLineNumber(),
-                    entityType: types_1.EntityType.CLASS
+                    entityType: types_1.DeadEntityType.CLASS,
+                    sourceFile: sourceFileName
                 };
                 returnObj.classes.push(unusedClass);
             }
-            returnObj.properties = _this.parseProperties(clazz.getProperties());
-            returnObj.functions = _this.parseMethodsOrFunctions(clazz.getMethods());
         });
         return returnObj;
     };
     /**
      * Parses the provided properties
      * @param {PropertyDeclaration[]} properties
-     * @return {UnusedProperty[]}
+     * @param {string} sourceFileName
+     * @return {DeadProperty[]}
      */
-    Application.prototype.parseProperties = function (properties) {
+    Application.prototype.parseProperties = function (properties, sourceFileName) {
         if (properties && properties.length) {
             var props_1 = [];
             properties.forEach(function (property) {
-                var references = property.findReferencesAsNodes();
-                if (!references || !references.length) {
+                var referenceNodes = property.findReferencesAsNodes();
+                if (!referenceNodes || !referenceNodes.length) {
                     var unusedProp = {
                         name: property.getName(),
                         type: property.getType().getText(),
                         lineNumber: property.getStartLineNumber(),
                         parentName: '',
-                        entityType: types_1.EntityType.PROPERTY
+                        entityType: types_1.DeadEntityType.PROPERTY,
+                        sourceFile: sourceFileName
                     };
                     props_1.push(unusedProp);
                 }
@@ -179,13 +191,16 @@ var Application = /** @class */ (function () {
     /**
      * Parses the provided methods or functions
      * @param {FunctionDeclaration[] | MethodDeclaration[]}methods
-     * @return {UnusedMethodOrFunction[]}
+     * @param {string} sourceFileName
+     * @return {DeadMethodOrFunction[]}
      */
-    Application.prototype.parseMethodsOrFunctions = function (methods) {
+    Application.prototype.parseMethodsOrFunctions = function (methods, sourceFileName) {
+        var returnObj = {
+            methods: [],
+            arguments: []
+        };
         if (methods && methods.length) {
-            var unusedMethods_1 = [];
             methods.forEach(function (method) {
-                var unusedArgs = [];
                 method.getParameters().forEach(function (param) {
                     var argRefs = param.findReferencesAsNodes();
                     if (!argRefs || !argRefs.length) {
@@ -194,9 +209,11 @@ var Application = /** @class */ (function () {
                             type: param.getType().getText(),
                             functionName: method.getName(),
                             lineNumber: param.getStartLineNumber(),
-                            entityType: types_1.EntityType.ARGUMENT
+                            entityType: types_1.DeadEntityType.ARGUMENT,
+                            sourceFile: sourceFileName,
+                            parentName: method.getName()
                         };
-                        unusedArgs.push(arg);
+                        returnObj.arguments.push(arg);
                     }
                 });
                 var references = method.findReferencesAsNodes();
@@ -206,21 +223,22 @@ var Application = /** @class */ (function () {
                         type: method.getReturnType().getText(),
                         lineNumber: method.getStartLineNumber(),
                         parentName: '',
-                        entityType: types_1.EntityType.METHODORFUNCTION
+                        entityType: types_1.DeadEntityType.METHODORFUNCTION,
+                        sourceFile: sourceFileName
                     };
-                    unusedMethods_1.push(unusedMethod);
+                    returnObj.methods.push(unusedMethod);
                 }
             });
-            return unusedMethods_1;
         }
-        return [];
+        return returnObj;
     };
     /**
      * Parses the provided interfaces
      * @param {InterfaceDeclaration[]} interfaces
-     * @return {UnusedExtendable[]}
+     * @param {string} sourceFileName
+     * @return {DeadExtendable[]}
      */
-    Application.prototype.parseInterfaces = function (interfaces) {
+    Application.prototype.parseInterfaces = function (interfaces, sourceFileName) {
         var returnObj = [];
         interfaces.forEach(function (iFace) {
             var references = iFace.findReferencesAsNodes();
@@ -230,7 +248,8 @@ var Application = /** @class */ (function () {
                     extends: iFace.getParent().getKindName(),
                     type: 'interface',
                     lineNumber: iFace.getStartLineNumber(),
-                    entityType: types_1.EntityType.INTERFACE
+                    entityType: types_1.DeadEntityType.INTERFACE,
+                    sourceFile: sourceFileName
                 };
                 returnObj.push(unusedInterface);
             }
@@ -240,16 +259,18 @@ var Application = /** @class */ (function () {
     /**
      * Parses the provided enums
      * @param {EnumDeclaration[]} enums
-     * @return {UnusedEntity[]}
+     * @param {string} sourceFileName
+     * @return {DeadEntity[]}
      */
-    Application.prototype.parseEnums = function (enums) {
+    Application.prototype.parseEnums = function (enums, sourceFileName) {
         var returnObj = [];
         enums.forEach(function (enumItem) {
             var unusedEnum = {
                 name: enumItem.getName(),
                 type: null,
                 lineNumber: enumItem.getStartLineNumber(),
-                entityType: types_1.EntityType.ENUM
+                entityType: types_1.DeadEntityType.ENUM,
+                sourceFile: sourceFileName
             };
             returnObj.push(unusedEnum);
         });

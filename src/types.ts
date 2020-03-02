@@ -1,38 +1,44 @@
 /**
- * Base UnusedEntity
+ * Typescript Types used throughout the application
  */
-export interface UnusedEntity {
+
+/**
+ * Base DeadEntity
+ */
+export interface DeadEntity {
 	name: string;
 	type: string;
 	lineNumber: number;
-	entityType: EntityType;
+	entityType: DeadEntityType;
+	sourceFile: string;
 }
 
 /**
  * Argument for a method or function
  */
-export interface ArgumentEntity extends UnusedEntity {
+export interface DeadArgumentEntity extends DeadEntity {
 	functionName: string;
+	parentName: string;
 }
 
 /**
  * A method or function
  */
-export interface UnusedMethodOrFunction extends UnusedEntity {
+export interface DeadMethodOrFunction extends DeadEntity {
 	parentName: string;
 }
 
 /**
  * A class property
  */
-export interface UnusedProperty extends UnusedEntity {
+export interface DeadProperty extends DeadEntity {
 	parentName: string;
 }
 
 /**
  * A class or interface
  */
-export interface UnusedExtendable extends UnusedEntity {
+export interface DeadExtendable extends DeadEntity {
 	extends: string;
 }
 
@@ -40,18 +46,22 @@ export interface UnusedExtendable extends UnusedEntity {
  * This is our consumable and describes all the unused
  * things in a source file
  */
-export interface UnusedSourceFileEntity {
+export interface DeadSourceFileEntity {
 	fileName: string;
 	filePath: string;
-	unusedFunctions: UnusedMethodOrFunction[];
-	unusedProperties: UnusedProperty[];
-	unusedInterfaces: UnusedExtendable[];
-	unusedClasses: UnusedExtendable[];
-	unusedTypes: UnusedExtendable[];
-	unusedEnums: UnusedEntity[];
+	unusedFunctions: DeadMethodOrFunction[];
+	unusedProperties: DeadProperty[];
+	unusedInterfaces: DeadExtendable[];
+	unusedClasses: DeadExtendable[];
+	unusedTypes: DeadExtendable[];
+	unusedEnums: DeadEntity[];
+	unusedArguments: DeadArgumentEntity[];
 }
 
-export enum EntityType {
+/**
+ * Defines the different types of entities we may encounter
+ */
+export enum DeadEntityType {
 	CLASS = 'Class',
 	PROPERTY = 'Property',
 	ENUM = 'Enum',

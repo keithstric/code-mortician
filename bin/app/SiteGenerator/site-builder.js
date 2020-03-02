@@ -21,8 +21,11 @@ function getLayoutHtml(unusedEntities) {
 function getSidebarHtml(unusedEntities) {
     var returnVal = "";
     if (unusedEntities && unusedEntities.length) {
+        unusedEntities = unusedEntities.sort(function (a, b) {
+            return a.fileName > b.fileName ? 1 : a.fileName < b.fileName ? -1 : 0;
+        });
         unusedEntities.forEach(function (unusedFileEntity) {
-            returnVal += "\n        <a href=\"#" + unusedFileEntity.fileName + "\" class=\"sidebarLink\">" + unusedFileEntity.fileName + "</a>\n      ";
+            returnVal += "\n        <a href=\"#" + unusedFileEntity.fileName + "\" class=\"sidebarLink\" title=\"" + unusedFileEntity.filePath + "\">" + unusedFileEntity.fileName + "</a>\n      ";
         });
     }
     return returnVal;
@@ -30,11 +33,17 @@ function getSidebarHtml(unusedEntities) {
 function getContentHtml(unusedFileEntities) {
     var returnVal = "";
     if (unusedFileEntities && unusedFileEntities.length) {
+        unusedFileEntities.sort(function (a, b) {
+            return a.fileName > b.fileName ? 1 : a.fileName < b.fileName ? -1 : 0;
+        });
         unusedFileEntities.forEach(function (unusedFileEntity) {
             returnVal += "<a id=\"" + unusedFileEntity.fileName + "\"></a>";
             var props = Object.keys(unusedFileEntity).forEach(function (key) {
                 var unusedFileProp = unusedFileEntity[key];
                 if (Array.isArray(unusedFileProp) && unusedFileProp.length) {
+                    unusedFileProp = unusedFileProp.sort(function (a, b) {
+                        return a.name > b.name ? 1 : a.name < b.name ? -1 : 0;
+                    });
                     unusedFileProp.forEach(function (unusedEntity) {
                         returnVal += "" + getEntityHtml(unusedEntity);
                     });
@@ -46,7 +55,8 @@ function getContentHtml(unusedFileEntities) {
 }
 function getEntityHtml(unusedEntity) {
     var returnVal = "  \n<div class=\"unusedEntity flex-column\">\n  <h3>" + unusedEntity.entityType + ": " + unusedEntity.name + "</h3>\n  <div class=\"entityBody flex-column\">\n  ";
-    Object.keys(unusedEntity).forEach(function (key) {
+    var keys = Object.keys(unusedEntity).sort();
+    keys.forEach(function (key) {
         returnVal += "\n    <div class=\"entityProperty\">\n      <span class=\"label\">" + key + ":</span>\n      <span class=\"value\">" + unusedEntity[key] + "</span>\n    </div>\n    ";
     });
     returnVal += "\n  </div>\n </div>\n  ";

@@ -1,34 +1,52 @@
-import {UnusedSourceFileEntity} from "../../types";
-import * as fs from 'fs';
+import {DeadSourceFileEntity} from "../../types";
+import * as fs from 'fs-extra';
 import * as path from 'path';
+import * as rimraf from 'rimraf';
 import {generateHtmlPage} from "./site-builder";
 
-/**
- * The default options. All paths are relative to package.json
- */
 const defaultOptions = {
-	outputPath: './graveyard-docs',
-	copyFolders: ['./images', './css']
+	outputPath: 'graveyard-docs',
+	copyFolders: ['./css']
 };
 
-export function buildSite(unusedFileEntities: UnusedSourceFileEntity[], options = defaultOptions) {
-	const docsDirPath = path.join(path.dirname(require.main.filename), options.outputPath);
-	// delete everything in the outputPath
-	try {
-		for (let file of fs.readdirSync(docsDirPath)) {
-			fs.rmdirSync(path.join(docsDirPath, file));
-		}
-	}catch(e) {
-		console.error(e);
-	}
+/**
+ * Construct the html and create the appropriate files
+ * @param unusedFileEntities
+ * @param options
+ */
+export function buildSite(unusedFileEntities: DeadSourceFileEntity[], options = defaultOptions) {
+	const {outputPath} = options;
+	console.log(`Writing documentation to ${outputPath}`);
 
+	// delete everything in the outputPath
+	if (fs.existsSync(outputPath)) {
+		try {
+			rimraf.sync(outputPath);
+		}catch(e) {
+			console.error('Error Deleting output path', e);
+		}
+	}
+	// Generate the html and dump into the output path
 	const html = generateHtmlPage(unusedFileEntities);
 	try {
-		fs.mkdirSync(docsDirPath);
+		if (!fs.existsSync(outputPath)) {
+			fs.mkdirSync(outputPath);
+		}
+		const docsPath = path.join(outputPath, 'index.html');
+		fs.writeFileSync(docsPath, html);
 	}catch(e) {
-		console.log('Directory already exists');
+		console.error('Error creating output path', e);
 	}
-	const docsPath = path.join(docsDirPath, 'index.html');
-	console.log('docsPath=', docsPath);
-	fs.writeFileSync(docsPath, html);
+	// Copy the asset folders to the output path
+	try {
+		for (let folder of options.copyFolders) {
+			const assetFolderPath = path.join(path.dirname(require.main.filename), folder);
+			const destFolderPath = path.join(outputPath, folder);
+			if (fs.existsSync(assetFolderPath)) {
+				fs.copySync(assetFolderPath, destFolderPath);
+			}
+		}
+	}catch(e) {
+		console.error('Error copying asset directories', e);
+	}
 }

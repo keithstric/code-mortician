@@ -1,38 +1,57 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var fs = require("fs");
+var fs = require("fs-extra");
 var path = require("path");
+var rimraf = require("rimraf");
 var site_builder_1 = require("./site-builder");
-/**
- * The default options. All paths are relative to package.json
- */
 var defaultOptions = {
-    outputPath: './graveyard-docs',
-    copyFolders: ['./images', './css']
+    outputPath: 'graveyard-docs',
+    copyFolders: ['./css']
 };
+/**
+ * Construct the html and create the appropriate files
+ * @param unusedFileEntities
+ * @param options
+ */
 function buildSite(unusedFileEntities, options) {
     if (options === void 0) { options = defaultOptions; }
-    var docsDirPath = path.join(path.dirname(require.main.filename), options.outputPath);
+    var outputPath = options.outputPath;
+    console.log("Writing documentation to " + outputPath);
     // delete everything in the outputPath
+    if (fs.existsSync(outputPath)) {
+        try {
+            rimraf.sync(outputPath);
+        }
+        catch (e) {
+            console.error('Error Deleting output path', e);
+        }
+    }
+    // Generate the html and dump into the output path
+    var html = site_builder_1.generateHtmlPage(unusedFileEntities);
     try {
-        for (var _i = 0, _a = fs.readdirSync(docsDirPath); _i < _a.length; _i++) {
-            var file = _a[_i];
-            fs.rmdirSync(path.join(docsDirPath, file));
+        if (!fs.existsSync(outputPath)) {
+            fs.mkdirSync(outputPath);
+        }
+        var docsPath = path.join(outputPath, 'index.html');
+        fs.writeFileSync(docsPath, html);
+    }
+    catch (e) {
+        console.error('Error creating output path', e);
+    }
+    // Copy the asset folders to the output path
+    try {
+        for (var _i = 0, _a = options.copyFolders; _i < _a.length; _i++) {
+            var folder = _a[_i];
+            var assetFolderPath = path.join(path.dirname(require.main.filename), folder);
+            var destFolderPath = path.join(outputPath, folder);
+            if (fs.existsSync(assetFolderPath)) {
+                fs.copySync(assetFolderPath, destFolderPath);
+            }
         }
     }
     catch (e) {
-        console.error(e);
+        console.error('Error copying asset directories', e);
     }
-    var html = site_builder_1.generateHtmlPage(unusedFileEntities);
-    try {
-        fs.mkdirSync(docsDirPath);
-    }
-    catch (e) {
-        console.log('Directory already exists');
-    }
-    var docsPath = path.join(docsDirPath, 'index.html');
-    console.log('docsPath=', docsPath);
-    fs.writeFileSync(docsPath, html);
 }
 exports.buildSite = buildSite;
 //# sourceMappingURL=builder.js.map
