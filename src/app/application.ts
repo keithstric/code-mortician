@@ -128,7 +128,7 @@ export class Application {
 			unusedEnums: [],
 			unusedArguments: []
 		};
-
+		// Classes
 		const classes = this.parseClasses(sourceFile.getClasses(), sourceFile.getFilePath());
 		sourceFileEntity.unusedFunctions = [...sourceFileEntity.unusedFunctions, ...classes.functions];
 		sourceFileEntity.unusedClasses = [...sourceFileEntity.unusedClasses, ...classes.classes];

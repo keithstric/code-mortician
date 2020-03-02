@@ -1,5 +1,5 @@
 import {DeadSourceFileEntity} from "../types";
-import {Node, ReferenceFindableNode} from "ts-morph";
+import {Node, ReferencedSymbol, ReferenceFindableNode} from "ts-morph";
 
 export function sourceFileHasUnusedEntities(sourceFileEntity: DeadSourceFileEntity) {
 	if (sourceFileEntity) {
@@ -15,4 +15,21 @@ export function sourceFileHasUnusedEntities(sourceFileEntity: DeadSourceFileEnti
 		}
 	}
 	return false;
+}
+
+export function areCallersDead(refNode: ReferenceFindableNode) {
+	let areCallersDead = true;
+	if (refNode) {
+		const callers: ReferencedSymbol[] = refNode.findReferences();
+		if (callers && callers.length) {
+			for (let caller of callers) {
+				const callerRefs = caller.getReferences();
+				if (callerRefs && callerRefs.length) {
+					areCallersDead = false;
+					break;
+				}
+			}
+		}
+	}
+	return areCallersDead;
 }
